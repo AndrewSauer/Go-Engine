@@ -67,6 +67,21 @@ class Board:
                     space_image=img['space']
                 new_space_image=pygame.transform.scale(space_image,(self.space_length,self.space_length))
                 screen.blit(new_space_image,(self.x+i*self.space_length,self.y+j*self.space_length))
+    def mouse_over(self,x,y):#From mouse coordinates, determine which if any space mouse is hovering over
+        result_x=int((x-self.x)/self.space_length)
+        result_y=int((y-self.y)/self.space_length)
+        if result_x>=0 and result_x<self.board_size and result_y>=0 and result_y<self.board_size:
+            return (result_x,result_y)
+    def hover_stone(self,tup,stone):#hover a stone over a board position, if it is empty (stone=1: black, stone=2: white)
+        if self.position[tup[0]][tup[1]]==0 and (stone==1 or stone==2):
+            alpha=128
+            if stone==1:
+                ghost_stone_image=img['black'].copy()
+                ghost_stone_image.fill((255,255,255,alpha),None,pygame.BLEND_RGBA_MULT)
+            elif stone==2:
+                ghost_stone_image=img['white'].copy()
+                ghost_stone_image.fill((255,255,255,alpha),None,pygame.BLEND_RGBA_MULT)
+            screen.blit(ghost_stone_image,(self.x+x*self.space_length,self.y+y*self.space_length))              
 
 def blank_position(board_size):
     result=[]
@@ -83,5 +98,8 @@ board_y=int((screen_height-top_bar_height-board_length)/2)+top_bar_height
 cur_board=Board(board_x,board_y,space_length,board_size)
 cur_board.position[0][0]=1
 cur_board.position[18][18]=2
-cur_board.display_board()
-pygame.display.flip()
+while True:
+    x,y=pygame.mouse.get_pos()
+    cur_board.display_board()
+    cur_board.hover_stone(cur_board.mouse_over(x,y),1)
+    pygame.display.flip()
