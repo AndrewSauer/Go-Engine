@@ -1,4 +1,5 @@
 import pygame
+import time
 pygame.init()
 #set up screen
 screen_width=1500
@@ -22,13 +23,16 @@ def display_message(message):
 #shows the board and pieces on screen
 class Board:
     def __init__(self,x,y,space_length,board_size):
+        global img
         self.x=x
         self.y=y
         self.space_length=space_length
         self.board_size=board_size
         self.position=blank_position(board_size)
+        self.img={}
+        for key in img.keys():
+            self.img[key]=pygame.transform.scale(img[key],(self.space_length,self.space_length))
     def display_board(self):
-        global img
         if not len(self.position)==self.board_size:
             print("Fatal error: Invalid position matrix!")
             print(self.position)
@@ -40,33 +44,32 @@ class Board:
                 exit()
             for j in range(self.board_size):
                 if self.position[i][j]==1:
-                    space_image=img['black']
+                    space_image=self.img['black']
                 elif self.position[i][j]==2:
-                    space_image=img['white']
+                    space_image=self.img['white']
                 elif i==0:
                     if j==0:
-                        space_image=img['top_left']
+                        space_image=self.img['top_left']
                     elif j==board_size-1:
-                        space_image=img['bottom_left']
+                        space_image=self.img['bottom_left']
                     else:
-                        space_image=img['left']
+                        space_image=self.img['left']
                 elif i==self.board_size-1:
                     if j==0:
-                        space_image=img['top_right']
+                        space_image=self.img['top_right']
                     elif j==self.board_size-1:
-                        space_image=img['bottom_right']
+                        space_image=self.img['bottom_right']
                     else:
-                        space_image=img['right']
+                        space_image=self.img['right']
                 elif j==0:
-                    space_image=img['top']
+                    space_image=self.img['top']
                 elif j==self.board_size-1:
-                    space_image=img['bottom']
+                    space_image=self.img['bottom']
                 elif self.board_size==19 and i in [3,9,15] and j in [3,9,15]:
-                    space_image=img['star']
+                    space_image=self.img['star']
                 else:
-                    space_image=img['space']
-                new_space_image=pygame.transform.scale(space_image,(self.space_length,self.space_length))
-                screen.blit(new_space_image,(self.x+i*self.space_length,self.y+j*self.space_length))
+                    space_image=self.img['space']
+                screen.blit(space_image,(self.x+i*self.space_length,self.y+j*self.space_length))
     def mouse_over(self,x,y):#From mouse coordinates, determine which if any space mouse is hovering over
         result_x=int((x-self.x)/self.space_length)
         result_y=int((y-self.y)/self.space_length)
@@ -76,11 +79,10 @@ class Board:
         if self.position[tup[0]][tup[1]]==0 and (stone==1 or stone==2):
             alpha=128
             if stone==1:
-                ghost_stone_image=img['black'].copy()
-                ghost_stone_image.fill((255,255,255,alpha),None,pygame.BLEND_RGBA_MULT)
+                ghost_stone_image=img['black'].convert_alpha()
             elif stone==2:
-                ghost_stone_image=img['white'].copy()
-                ghost_stone_image.fill((255,255,255,alpha),None,pygame.BLEND_RGBA_MULT)
+                ghost_stone_image=img['white'].convert_alpha()
+            ghost_stone_image.set_alpha(alpha)
             screen.blit(ghost_stone_image,(self.x+x*self.space_length,self.y+y*self.space_length))              
 
 def blank_position(board_size):
@@ -101,5 +103,8 @@ cur_board.position[18][18]=2
 while True:
     x,y=pygame.mouse.get_pos()
     cur_board.display_board()
-    cur_board.hover_stone(cur_board.mouse_over(x,y),1)
+    mouse_board_pos=cur_board.mouse_over(x,y)
+    if mouse_board_pos:
+        cur_board.hover_stone(mouse_board_pos,2)
+    print("frame")
     pygame.display.flip()
