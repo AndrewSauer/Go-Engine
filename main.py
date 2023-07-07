@@ -8,6 +8,15 @@ top_bar_height=50
 size=[screen_width,screen_height]
 screen=pygame.display.set_mode(size)
 
+def copy_list(l):
+    if type(l)==list:
+        result=[]
+        for i in l:
+            result.append(copy_list(i))
+        return result
+    else:
+        return l
+
 #load images
 img_keys=['left','right','top','bottom','top_left','top_right','bottom_left','bottom_right','space','star','black','white']
 img={}
@@ -96,23 +105,55 @@ def blank_position(board_size):
 
 #remove groups without liberties of color 1=black or 2=white
 def remove_surrounded(position,color):
-    grouped=position#grouped is 0 or 1 determining which stones have been put in a group so far
+    grouped=copy_list(position)#0=group not found yet, 1=group found and checked, 2=current group we're checking
     for i in range(len(grouped)):
         for j in range(len(grouped[i])):
             grouped[i][j]=0#an array of zeros the same size as position
-    new_position=position
+    new_position=copy_list(position)
     for i in range(len(position)):
-        for j in range(len(position[i])):
-            if position[i][j]!=0 and grouped[i][j]==0:#if the stone hasn't been shown to be part of a group yet:
+        for j in range(len(position)):#we only support square boards
+            if position[i][j]==color and grouped[i][j]==0:#if the stone hasn't been shown to be part of a group yet:
                 #Find the group, and remove it if no liberties
+                tuples=[(i,j)]#stones we know are part of the group, but haven't yet checked for liberties and adjacent stones
+                checked=[]#stones we've checked already as part of the group
+                liberties=False#flip to true if we ever find a liberty
+                while len(tuples)>0:
+                    tup=tuples.pop()#deal with the last one
+                    checked.append(tup)
+                    grouped[tup[0]][tup[1]]=1
+                    if tup[0]>0 and position[tup[0]-1][tup[1]]==color and grouped[tup[0]-1][tup[1]]==0:#check left for group stone
+                        tuples.append((tup[0]-1,tup[1]))
+                    if tup[1]>0 and position[tup[0]][tup[1]-1]==color and grouped[tup[0]][tup[1]-1]==0:#check up for group stone
+                        tuples.append((tup[0],tup[1]-1))
+                    if tup[0]<len(position)-1 and position[tup[0]+1][tup[1]]==color and grouped[tup[0]+1][tup[1]]==0:#check right for group stone
+                        tuples.append((tup[0]+1,tup[1]))
+                    if tup[1]<len(position)-1 and position[tup[0]][tup[1]+1]==color and grouped[tup[0]][tup[1]+1]==0:#check down for group stone
+                        tuples.append((tup[0],tup[1]+1))
+                    if not liberties and tup[0]>0 and position[tup[0]-1][tup[1]]==0:#check for liberties
+                        liberties=True
+                    if not liberties and tup[1]>0 and position[tup[0]][tup[1]-1]==0:
+                        liberties=True
+                    if not liberties and tup[0]<len(position)-1 and position[tup[0]+1][tup[1]]==0:
+                        liberties=True
+                    if not liberties and tup[1]<len(position)-1 and position[tup[0]][tup[1]+1]==0:
+                        liberties=True
+                #Now we've set all stones in the group to 1.
+                print(new_position)
+                print(grouped)
+                print(liberties)
+                #remove stones in the group if no liberties
+                if not liberties:
+                    for tup in checked:
+                        new_position[tup[0]][tup[1]]=0
+    return new_position
 
 #take in current board position, position of move, and player moving
 #return the board position after the move, or None if the move position is already occupied
 def move_with_capture(position,move_pos,player_turn):
-    new_position=position
+    new_position=copy_list(position)
     new_position[move_pos[0]][move_pos[1]]=player_turn
     new_position=remove_surrounded(new_position,3-player_turn)
-    new_position=remove_surrounded(new_position,3-player_turn)
+    new_position=remove_surrounded(new_position,player_turn)
     return new_position
 
 #check if move is legal given history. If so return position after move, otherwise return None    
@@ -121,9 +162,12 @@ def is_legal(history,position,move_pos,player_turn):
     if new_position==None:
         return None
     if not SUICIDE_LEGAL and new_position[move_pos[0]][move_pos[1]]==0:
+        print("Suicide is illegal")
         return None
-    if SUPERKO=="Positional" and new_position in history:
-        return None
+    #if SUPERKO=="Positional" and CONTINUE:            
+    #    print("Repeating position is illegal")
+    #    print(history)
+    #    return None
     return new_position
 
 board_size=19
@@ -133,7 +177,7 @@ board_x=int((screen_width-board_length)/2)
 board_y=int((screen_height-top_bar_height-board_length)/2)+top_bar_height
 cur_board=Board(board_x,board_y,space_length,board_size)
 player_turn=1#black's turn first
-history=[cur_board.position]#history of all board positions
+history=[copy_list(cur_board.position)]#history of all board positions
 while True:
     x,y=pygame.mouse.get_pos()
     mouse_board_pos=cur_board.mouse_over(x,y)
@@ -141,10 +185,10 @@ while True:
         if event.type==pygame.MOUSEBUTTONDOWN and event.button==1:#Left mouse button is 1, right is 3, middle is 2
             if mouse_board_pos:
                 new_position=is_legal(history,cur_board.position,mouse_board_pos,player_turn)
-                if after_position
+                if new_position:
                     cur_board.position=new_position
                     player_turn=3-player_turn
-                    history.append(cur_board.position)
+                    history.append(copy_list(cur_board.position))
     cur_board.display_board()
     if mouse_board_pos:
         cur_board.hover_stone(mouse_board_pos,player_turn)
