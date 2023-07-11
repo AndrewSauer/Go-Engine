@@ -138,9 +138,6 @@ def remove_surrounded(position,color):
                     if not liberties and tup[1]<len(position)-1 and position[tup[0]][tup[1]+1]==0:
                         liberties=True
                 #Now we've set all stones in the group to 1.
-                print(new_position)
-                print(grouped)
-                print(liberties)
                 #remove stones in the group if no liberties
                 if not liberties:
                     for tup in checked:
@@ -151,7 +148,10 @@ def remove_surrounded(position,color):
 #return the board position after the move, or None if the move position is already occupied
 def move_with_capture(position,move_pos,player_turn):
     new_position=copy_list(position)
-    new_position[move_pos[0]][move_pos[1]]=player_turn
+    if new_position[move_pos[0]][move_pos[1]]==0:
+        new_position[move_pos[0]][move_pos[1]]=player_turn
+    else:
+        return None
     new_position=remove_surrounded(new_position,3-player_turn)
     new_position=remove_surrounded(new_position,player_turn)
     return new_position
@@ -164,10 +164,9 @@ def is_legal(history,position,move_pos,player_turn):
     if not SUICIDE_LEGAL and new_position[move_pos[0]][move_pos[1]]==0:
         print("Suicide is illegal")
         return None
-    #if SUPERKO=="Positional" and CONTINUE:            
-    #    print("Repeating position is illegal")
-    #    print(history)
-    #    return None
+    if SUPERKO=="Positional" and new_position in history:            
+        print("Repeating position is illegal")
+        return None
     return new_position
 
 board_size=19
