@@ -83,10 +83,16 @@ class Board:
                     space_image=self.img['space']
                 screen.blit(space_image,(self.x+i*self.space_length,self.y+j*self.space_length))
     def mouse_over(self,x,y):#From mouse coordinates, determine which if any space mouse is hovering over
+        #Funny, int casting interacts weird with negatives. Negative numbers round up, positive numbers round down
+        #so we just make sure it isn't negative
+        if x-self.x<0 or y-self.y<0:
+            return None
         result_x=int((x-self.x)/self.space_length)
         result_y=int((y-self.y)/self.space_length)
         if result_x>=0 and result_x<self.board_size and result_y>=0 and result_y<self.board_size:
             return (result_x,result_y)
+        else:
+            return None
     def hover_stone(self,tup,stone):#hover a stone over a board position, if it is empty (stone=1: black, stone=2: white)
         if self.position[tup[0]][tup[1]]==0 and (stone==1 or stone==2):
             alpha=128
