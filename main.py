@@ -191,10 +191,8 @@ while True:
                     player_turn=3-player_turn
                     cur_board.history.append(copy_list(cur_board.position))
     cur_board.display_board()
-    if not mouse_board_pos:#we don't hover when we're not over a square
-        do_hover=False
-    if mouse_board_pos and mouse_board_pos!=last_mouse_board_pos:#check for hover whenever mouse pos changes
-        if is_legal(cur_board.history,cur_board.position,mouse_board_pos,player_turn):
+    if mouse_board_pos!=last_mouse_board_pos:#check for hover whenever mouse pos changes
+        if mouse_board_pos and is_legal(cur_board.history,cur_board.position,mouse_board_pos,player_turn):
             do_hover=True
         else:
             do_hover=False
