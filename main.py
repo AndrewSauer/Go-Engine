@@ -41,6 +41,7 @@ class Board:
         self.board_size=board_size
         self.position=blank_position(board_size)
         self.img={}
+        self.history=[blank_position(board_size)]#history of all board positions
         for key in img.keys():
             self.img[key]=pygame.transform.scale(img[key],(self.space_length,self.space_length))
     def display_board(self):
@@ -176,19 +177,28 @@ board_x=int((screen_width-board_length)/2)
 board_y=int((screen_height-top_bar_height-board_length)/2)+top_bar_height
 cur_board=Board(board_x,board_y,space_length,board_size)
 player_turn=1#black's turn first
-history=[copy_list(cur_board.position)]#history of all board positions
+last_mouse_board_pos=None#initialize mouse position on board
+do_hover=False#Whether to hover a ghost stone over a position(used to avoid too many legality checks)
 while True:
     x,y=pygame.mouse.get_pos()
     mouse_board_pos=cur_board.mouse_over(x,y)
     for event in pygame.event.get():#update when placing down stones
         if event.type==pygame.MOUSEBUTTONDOWN and event.button==1:#Left mouse button is 1, right is 3, middle is 2
             if mouse_board_pos:
-                new_position=is_legal(history,cur_board.position,mouse_board_pos,player_turn)
+                new_position=is_legal(cur_board.history,cur_board.position,mouse_board_pos,player_turn)
                 if new_position:
                     cur_board.position=new_position
                     player_turn=3-player_turn
-                    history.append(copy_list(cur_board.position))
+                    cur_board.history.append(copy_list(cur_board.position))
     cur_board.display_board()
-    if mouse_board_pos:
-        cur_board.hover_stone(mouse_board_pos,player_turn)
+    if not mouse_board_pos:#we don't hover when we're not over a square
+        do_hover=False
+    if mouse_board_pos and mouse_board_pos!=last_mouse_board_pos:#check for hover whenever mouse pos changes
+        if is_legal(cur_board.history,cur_board.position,mouse_board_pos,player_turn):
+            do_hover=True
+        else:
+            do_hover=False
+    if do_hover:
+        cur_board.hover_stone(mouse_board_pos,player_turn)        
+    last_mouse_board_pos=mouse_board_pos
     pygame.display.flip()
