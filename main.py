@@ -1,3 +1,15 @@
+#Main rule differences which need be included
+#Ko and superko rules
+#Suicide
+#Eyes in Seki(and determination of seki when eyes don't count)
+#Scoring system(area/territory/stone/others?)
+#Komi/pierule/balance
+#How the game ends
+#Resolving life&death disputes after end of game
+#Handicap setup
+#Starting position
+#Time controls
+
 import pygame
 import time
 pygame.init()
@@ -110,6 +122,46 @@ def blank_position(board_size):
             result[i].append(0)
     return result
 
+class gameState:#state of a game in progress(before end of game and agreement phase)
+    def __init__(self,turn,board,black_prisoners,white_prisoners,rule_config):
+        self.turn=turn#1=black's turn, 2=white's turn
+        self.board=board#Board object representing current position and history
+        self.black_prisoners=black_prisoners#Current number of prisoners taken by black
+        self.white_prisoners=white_prisoners#Current number of prisoners taken by white
+        self.rule_config=rule_config
+    def play_at_pos(self,board_pos):#play at a position if such a play is legal
+        new_position=self.is_legal(board_pos)
+        #CONTINUE: Add prisoners if capture is made
+        if new_position:
+            self.board.position=new_position
+            self.turn=3-self.turn
+            self.board.history.append(copy_list(self.board.position))
+    #check if move is legal given history. If so return position after move, otherwise return None    
+    def is_legal(self,move_pos):
+        new_position=move_with_capture(self.board.position,move_pos,self.turn)
+        if new_position==None:
+            return None
+        if not self.rule_config.suicide and new_position[move_pos[0]][move_pos[1]]==0:
+            print("Suicide is illegal")
+            return None
+        if self.rule_config.superko=="Positional" and new_position in self.board.history:            
+            print("Repeating position is illegal")
+            return None
+        return new_position
+
+class ruleConfig:#A configuration of the rules we use for any particular game
+    def __init__(self,superko="Positional",suicide=True,sekieyes=True,scoring="Area",komi=7.5,ending="Twopass",disputes="ContinueFourpass",handicap=0,startpos=blank_position(19),timecontrols=None):
+        self.superko=superko#
+        self.suicide=suicide#
+        self.sekieyes=sekieyes#
+        self.scoring=scoring#
+        self.komi=komi#
+        self.ending=ending#
+        self.disputes=disputes#
+        self.handicap=handicap#
+        self.startpos=startpos#
+        self.timecontrols=timecontrols#
+
 #remove groups without liberties of color 1=black or 2=white
 def remove_surrounded(position,color):
     grouped=copy_list(position)#0=group not found yet, 1=group found and checked, 2=current group we're checking
@@ -164,45 +216,47 @@ def move_with_capture(position,move_pos,player_turn):
     return new_position
 
 #check if move is legal given history. If so return position after move, otherwise return None    
-def is_legal(history,position,move_pos,player_turn):
-    new_position=move_with_capture(position,move_pos,player_turn)
-    if new_position==None:
-        return None
-    if not SUICIDE_LEGAL and new_position[move_pos[0]][move_pos[1]]==0:
-        print("Suicide is illegal")
-        return None
-    if SUPERKO=="Positional" and new_position in history:            
-        print("Repeating position is illegal")
-        return None
-    return new_position
+#def is_legal(history,position,move_pos,player_turn):
+#    new_position=move_with_capture(position,move_pos,player_turn)
+#    if new_position==None:
+#        return None
+#    if not SUICIDE_LEGAL and new_position[move_pos[0]][move_pos[1]]==0:
+#        print("Suicide is illegal")
+#        return None
+#    if SUPERKO=="Positional" and new_position in history:            
+#        print("Repeating position is illegal")
+#        return None
+#    return new_position
 
 board_size=19
 space_length=int((screen_height-top_bar_height)/board_size)
 board_length=board_size*space_length
 board_x=int((screen_width-board_length)/2)
 board_y=int((screen_height-top_bar_height-board_length)/2)+top_bar_height
-cur_board=Board(board_x,board_y,space_length,board_size)
-player_turn=1#black's turn first
+state=gameState(1,Board(board_x,board_y,space_length,board_size),0,0,ruleConfig())
+#cur_board=Board(board_x,board_y,space_length,board_size)
+#player_turn=1#black's turn first
 last_mouse_board_pos=None#initialize mouse position on board
 do_hover=False#Whether to hover a ghost stone over a position(used to avoid too many legality checks)
 while True:
     x,y=pygame.mouse.get_pos()
-    mouse_board_pos=cur_board.mouse_over(x,y)
+    mouse_board_pos=state.board.mouse_over(x,y)
     for event in pygame.event.get():#update when placing down stones
         if event.type==pygame.MOUSEBUTTONDOWN and event.button==1:#Left mouse button is 1, right is 3, middle is 2
             if mouse_board_pos:
-                new_position=is_legal(cur_board.history,cur_board.position,mouse_board_pos,player_turn)
-                if new_position:
-                    cur_board.position=new_position
-                    player_turn=3-player_turn
-                    cur_board.history.append(copy_list(cur_board.position))
-    cur_board.display_board()
+                state.play_at_pos(mouse_board_pos)
+#                new_position=is_legal(cur_board.history,cur_board.position,mouse_board_pos,player_turn)
+#                if new_position:
+#                    cur_board.position=new_position
+#                    player_turn=3-player_turn
+#                    cur_board.history.append(copy_list(cur_board.position))
+    state.board.display_board()
     if mouse_board_pos!=last_mouse_board_pos:#check for hover whenever mouse pos changes
-        if mouse_board_pos and is_legal(cur_board.history,cur_board.position,mouse_board_pos,player_turn):
+        if mouse_board_pos and state.is_legal(mouse_board_pos):
             do_hover=True
         else:
             do_hover=False
     if do_hover:
-        cur_board.hover_stone(mouse_board_pos,player_turn)        
+        state.board.hover_stone(mouse_board_pos,state.turn)        
     last_mouse_board_pos=mouse_board_pos
     pygame.display.flip()
