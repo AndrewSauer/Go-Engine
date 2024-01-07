@@ -49,7 +49,7 @@ def display_message(textbox,message):
 
 #Textbox class
 class textBox:
-    def __init__(self, name, font, screen, x=0,y=0,width=100,height=20,background=(255,255,255),border=(0,0,0),textcolor=(0,0,0),text=""):
+    def __init__(self, name, font=game_font, screen=screen, x=0,y=0,width=100,height=20,background=(255,255,255),border=(0,0,0),textcolor=(0,0,0),text=""):
         self.name=name
         self.x=x
         self.y = y
@@ -158,11 +158,17 @@ class gameState:#state of a game in progress(before end of game and agreement ph
         self.rule_config=rule_config
     def play_at_pos(self,board_pos):#play at a position if such a play is legal
         new_position=self.is_legal(board_pos)
-        #CONTINUE: Add prisoners if capture is made
         if new_position:
-            self.board.position=new_position
-            self.turn=3-self.turn
-            self.board.history.append(copy_list(self.board.position))
+            #add captured prisoners
+            for i in range(len(new_position)):
+                for j in range(len(new_position)):
+                    if self.board.position[i][j]==1 and new_position[i][j]==0:#black piece was taken, add to white prisoners
+                        self.white_prisoners+=1
+                    elif self.board.position[i][j]==2 and new_position[i][j]==0:#white piece was taken, add to black prisoners
+                        self.black_prisoners+=1
+            self.board.position=new_position#change to new position
+            self.turn=3-self.turn#switch turn
+            self.board.history.append(copy_list(self.board.position))#add to history
             global top_bar
             if state.turn==1:
                 display_message(top_bar,"Black to play.")
@@ -272,8 +278,13 @@ state=gameState(1,Board(board_x,board_y,space_length,board_size),0,0,ruleConfig(
 #cur_board=Board(board_x,board_y,space_length,board_size)
 
 #Create top bar, display "black to play" on it
-top_bar=textBox(name="topBar",font=game_font,screen=screen,x=board_x,y=0,width=board_length,height=top_bar_height,text="")
+top_bar=textBox(name="topBar",x=board_x,y=0,width=board_length,height=top_bar_height,background=(0,0,0),border=(255,255,255),textcolor=(255,255,255),text="")
 display_message(top_bar,"Black to play.")
+#Create prisoner count bars
+black_prisoner_bar=textBox(name="blackPrisonerBar",x=5,y=0,width=board_x-10,height=top_bar_height,background=(0,0,0),border=(255,255,255),textcolor=(255,255,255),text="")
+display_message(black_prisoner_bar,"Black Prisoners: 0")
+white_prisoner_bar=textBox(name="whitePrisonerBar",x=board_x+board_length+5,y=0,width=board_x-10,height=top_bar_height,text="")
+display_message(white_prisoner_bar,"White Prisoners: 0")
 
 
 #player_turn=1#black's turn first
@@ -286,11 +297,9 @@ while True:
         if event.type==pygame.MOUSEBUTTONDOWN and event.button==1:#Left mouse button is 1, right is 3, middle is 2
             if mouse_board_pos:
                 state.play_at_pos(mouse_board_pos)
-#                new_position=is_legal(cur_board.history,cur_board.position,mouse_board_pos,player_turn)
-#                if new_position:
-#                    cur_board.position=new_position
-#                    player_turn=3-player_turn
-#                    cur_board.history.append(copy_list(cur_board.position))
+                #after playing at position, display new prisoner counts
+                display_message(black_prisoner_bar,"Black Prisoners: "+str(state.black_prisoners))
+                display_message(white_prisoner_bar,"White Prisoners: "+str(state.white_prisoners))
     state.board.display_board()#display board
     if mouse_board_pos!=last_mouse_board_pos:#check for hover whenever mouse pos changes
         if mouse_board_pos and state.is_legal(mouse_board_pos):
@@ -299,10 +308,16 @@ while True:
             do_hover=False
     if do_hover:
         state.board.hover_stone(mouse_board_pos,state.turn)
-        if state.turn==1:
+        if state.turn==1:#display turn whenever hover is activated
             display_message(top_bar,"Black to play.")
+            top_bar.background=(0,0,0)
+            top_bar.border=(255,255,255)
+            top_bar.textcolor=(255,255,255)
         else:
             display_message(top_bar,"White to play.")
+            top_bar.background=(255,255,255)
+            top_bar.border=(0,0,0)
+            top_bar.textcolor=(0,0,0)
 
     last_mouse_board_pos=mouse_board_pos
     pygame.display.flip()
