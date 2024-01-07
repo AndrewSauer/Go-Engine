@@ -16,9 +16,12 @@ pygame.init()
 #set up screen
 screen_width=1500
 screen_height=750
-top_bar_height=50
 size=[screen_width,screen_height]
 screen=pygame.display.set_mode(size)
+
+#Other visual parameters
+top_bar_height=50
+game_font=pygame.font.SysFont("Times New Roman",30)
 
 def copy_list(l):
     if type(l)==list:
@@ -36,12 +39,36 @@ for k in img_keys:
     img[k]=pygame.image.load("./Sprites/"+k+".png")
 
 #Rules constants
-SUICIDE_LEGAL=True
-SUPERKO="Positional"
+#SUICIDE_LEGAL=True
+#SUPERKO="Positional"
 
 #prints a message to the top bar
-def display_message(message):
-    print(message)#change this to show it on screen
+def display_message(textbox,message):
+    textbox.text=message
+    textbox.draw()
+
+#Textbox class
+class textBox:
+    def __init__(self, name, font, screen, x=0,y=0,width=100,height=20,background=(255,255,255),border=(0,0,0),textcolor=(0,0,0),text=""):
+        self.name=name
+        self.x=x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.background=background
+        self.border=border
+        self.textcolor=textcolor
+        self.text=text
+        self.font=font
+        self.screen = screen
+    def draw(self):
+        self.rect = pygame.draw.rect(self.screen,self.background,(self.x,self.y,self.width,self.height))
+        pygame.draw.rect(self.screen,self.border,(self.x,self.y,self.width,self.height),width=1)
+        text_surface=self.font.render(self.text,False,self.textcolor)
+        text_rect=text_surface.get_rect(center=(self.x+self.width/2,self.y+self.height/2))
+        self.screen.blit(text_surface,text_rect)
+    def within(self,x,y):
+        return x>=self.x and x<=self.x+self.width and y>=self.y and y<=self.y+self.height
 
 #shows the board and pieces on screen
 class Board:
@@ -136,21 +163,28 @@ class gameState:#state of a game in progress(before end of game and agreement ph
             self.board.position=new_position
             self.turn=3-self.turn
             self.board.history.append(copy_list(self.board.position))
+            global top_bar
+            if state.turn==1:
+                display_message(top_bar,"Black to play.")
+            else:
+                display_message(top_bar,"White to play.")
     #check if move is legal given history. If so return position after move, otherwise return None    
     def is_legal(self,move_pos):
+        global top_bar#so we can display rules messages on the top bar
         new_position=move_with_capture(self.board.position,move_pos,self.turn)
         if new_position==None:
             return None
         if not self.rule_config.suicide and new_position[move_pos[0]][move_pos[1]]==0:
-            print("Suicide is illegal")
+            display_message(top_bar,"Suicide is illegal")
             return None
         if self.rule_config.superko=="Positional" and new_position in self.board.history:            
-            print("Repeating position is illegal")
+            display_message(top_bar,"Repeating position is illegal")
             return None
         return new_position
+    #CONTINUE: Allow passing, ending, pierule komi
 
 class ruleConfig:#A configuration of the rules we use for any particular game
-    def __init__(self,superko="Positional",suicide=True,sekieyes=True,scoring="Area",komi=7.5,ending="Twopass",disputes="ContinueFourpass",handicap=0,startpos=blank_position(19),timecontrols=None):
+    def __init__(self,superko="Positional",suicide=True,sekieyes=True,scoring="Area",komi="Pierule",ending="Twopass",disputes="ContinueFourpass",handicap=0,startpos=blank_position(19),timecontrols=None):
         self.superko=superko#
         self.suicide=suicide#
         self.sekieyes=sekieyes#
@@ -228,6 +262,7 @@ def move_with_capture(position,move_pos,player_turn):
 #        return None
 #    return new_position
 
+#Create board and gamestate
 board_size=19
 space_length=int((screen_height-top_bar_height)/board_size)
 board_length=board_size*space_length
@@ -235,6 +270,12 @@ board_x=int((screen_width-board_length)/2)
 board_y=int((screen_height-top_bar_height-board_length)/2)+top_bar_height
 state=gameState(1,Board(board_x,board_y,space_length,board_size),0,0,ruleConfig())
 #cur_board=Board(board_x,board_y,space_length,board_size)
+
+#Create top bar, display "black to play" on it
+top_bar=textBox(name="topBar",font=game_font,screen=screen,x=board_x,y=0,width=board_length,height=top_bar_height,text="")
+display_message(top_bar,"Black to play.")
+
+
 #player_turn=1#black's turn first
 last_mouse_board_pos=None#initialize mouse position on board
 do_hover=False#Whether to hover a ghost stone over a position(used to avoid too many legality checks)
@@ -250,13 +291,18 @@ while True:
 #                    cur_board.position=new_position
 #                    player_turn=3-player_turn
 #                    cur_board.history.append(copy_list(cur_board.position))
-    state.board.display_board()
+    state.board.display_board()#display board
     if mouse_board_pos!=last_mouse_board_pos:#check for hover whenever mouse pos changes
         if mouse_board_pos and state.is_legal(mouse_board_pos):
             do_hover=True
         else:
             do_hover=False
     if do_hover:
-        state.board.hover_stone(mouse_board_pos,state.turn)        
+        state.board.hover_stone(mouse_board_pos,state.turn)
+        if state.turn==1:
+            display_message(top_bar,"Black to play.")
+        else:
+            display_message(top_bar,"White to play.")
+
     last_mouse_board_pos=mouse_board_pos
     pygame.display.flip()
