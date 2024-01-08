@@ -159,7 +159,7 @@ class gameState:#state of a game in progress(before end of game and agreement ph
     def play_at_pos(self,board_pos):#play at a position if such a play is legal
         new_position=self.is_legal(board_pos)
         if new_position:
-            #add captured prisoners
+            #add captured prisoners #FIX: Doesn't count properly on suicide
             for i in range(len(new_position)):
                 for j in range(len(new_position)):
                     if self.board.position[i][j]==1 and new_position[i][j]==0:#black piece was taken, add to white prisoners
@@ -174,7 +174,7 @@ class gameState:#state of a game in progress(before end of game and agreement ph
                 display_message(top_bar,"Black to play.")
             else:
                 display_message(top_bar,"White to play.")
-    #check if move is legal given history. If so return position after move, otherwise return None    
+    #check if move is legal given history. If so return position after move, otherwise return None
     def is_legal(self,move_pos):
         global top_bar#so we can display rules messages on the top bar
         new_position=move_with_capture(self.board.position,move_pos,self.turn)
@@ -255,6 +255,23 @@ def move_with_capture(position,move_pos,player_turn):
     new_position=remove_surrounded(new_position,player_turn)
     return new_position
 
+def stateUndo(state):
+    #if game hasn't started, do nothing
+    if len(state.board.history)<=1:
+        return state
+    lastPosition=copy_list(state.board.history[-2])#CHECK: Does ko and superko still work properly on undo?
+    curPosition=copy_list(state.board.position)
+    for i in range(len(curPosition)):#undo prisoner counts
+        for j in range(len(curPosition)):
+            if lastPosition==1 and curPosition==0:#FIX: prisoner counts don't actually decrease on undo
+                state.white_prisoners-=1
+            elif lastPosition==2 and curPosition==0:
+                state.black_prisoners-=1
+    state.turn=3-state.turn#swap turn
+    state.board.position=lastPosition#turn to last position
+    state.board.history.pop()#remove last turn on history
+    return state
+
 #check if move is legal given history. If so return position after move, otherwise return None    
 #def is_legal(history,position,move_pos,player_turn):
 #    new_position=move_with_capture(position,move_pos,player_turn)
@@ -286,10 +303,22 @@ display_message(black_prisoner_bar,"Black Prisoners: 0")
 white_prisoner_bar=textBox(name="whitePrisonerBar",x=board_x+board_length+5,y=0,width=board_x-10,height=top_bar_height,text="")
 display_message(white_prisoner_bar,"White Prisoners: 0")
 
+def display_turn(top_bar,turn):
+    if state.turn==1:#display turn whenever hover is activated
+        display_message(top_bar,"Black to play.")
+        top_bar.background=(0,0,0)
+        top_bar.border=(255,255,255)
+        top_bar.textcolor=(255,255,255)
+    else:
+        display_message(top_bar,"White to play.")
+        top_bar.background=(255,255,255)
+        top_bar.border=(0,0,0)
+        top_bar.textcolor=(0,0,0)    
 
 #player_turn=1#black's turn first
 last_mouse_board_pos=None#initialize mouse position on board
 do_hover=False#Whether to hover a ghost stone over a position(used to avoid too many legality checks)
+ctrl_held=False#Whether ctrl key is held
 while True:
     x,y=pygame.mouse.get_pos()
     mouse_board_pos=state.board.mouse_over(x,y)
@@ -300,6 +329,17 @@ while True:
                 #after playing at position, display new prisoner counts
                 display_message(black_prisoner_bar,"Black Prisoners: "+str(state.black_prisoners))
                 display_message(white_prisoner_bar,"White Prisoners: "+str(state.white_prisoners))
+        elif event.type==pygame.KEYDOWN and event.key==pygame.K_LCTRL:
+            ctrl_held=True
+        elif event.type==pygame.KEYUP and event.key==pygame.K_LCTRL:
+            ctrl_held=False
+        elif event.type==pygame.KEYDOWN and event.key==pygame.K_z and ctrl_held:
+            state=stateUndo(state)
+            #display new prisoner counts and turn after undoing
+            display_turn(top_bar,state.turn)
+            display_message(black_prisoner_bar,"Black Prisoners: "+str(state.black_prisoners))
+            display_message(white_prisoner_bar,"White Prisoners: "+str(state.white_prisoners))
+
     state.board.display_board()#display board
     if mouse_board_pos!=last_mouse_board_pos:#check for hover whenever mouse pos changes
         if mouse_board_pos and state.is_legal(mouse_board_pos):
@@ -308,16 +348,7 @@ while True:
             do_hover=False
     if do_hover:
         state.board.hover_stone(mouse_board_pos,state.turn)
-        if state.turn==1:#display turn whenever hover is activated
-            display_message(top_bar,"Black to play.")
-            top_bar.background=(0,0,0)
-            top_bar.border=(255,255,255)
-            top_bar.textcolor=(255,255,255)
-        else:
-            display_message(top_bar,"White to play.")
-            top_bar.background=(255,255,255)
-            top_bar.border=(0,0,0)
-            top_bar.textcolor=(0,0,0)
+        display_turn(top_bar,state.turn)
 
     last_mouse_board_pos=mouse_board_pos
     pygame.display.flip()
