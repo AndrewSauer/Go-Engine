@@ -159,13 +159,18 @@ class gameState:#state of a game in progress(before end of game and agreement ph
     def play_at_pos(self,board_pos):#play at a position if such a play is legal
         new_position=self.is_legal(board_pos)
         if new_position:
-            #add captured prisoners #FIX: Doesn't count properly on suicide
+            #add captured prisoners
             for i in range(len(new_position)):
                 for j in range(len(new_position)):
                     if self.board.position[i][j]==1 and new_position[i][j]==0:#black piece was taken, add to white prisoners
                         self.white_prisoners+=1
                     elif self.board.position[i][j]==2 and new_position[i][j]==0:#white piece was taken, add to black prisoners
                         self.black_prisoners+=1
+                    elif board_pos[0]==i and board_pos[1]==j and new_position[i][j]==0:#suicide stone was taken, add to prisoners of whose turn it is
+                        if self.turn==1:#black's turn, white gets the suicide prisoners
+                            self.white_prisoners+=1
+                        elif self.turn==2:#white's turn, black gets the suicide prisoners
+                            self.black_prisoners+=1
             self.board.position=new_position#change to new position
             self.turn=3-self.turn#switch turn
             self.board.history.append(copy_list(self.board.position))#add to history
