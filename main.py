@@ -180,9 +180,9 @@ class gameState:#state of a game in progress(before end of game and agreement ph
             self.white_prisoners_history.append(self.white_prisoners)
             global top_bar
             if state.turn==1:
-                display_message(top_bar,"Black to play.")
+                display_turn(top_bar,"Black to play.")
             else:
-                display_message(top_bar,"White to play.")
+                display_turn(top_bar,"White to play.")
     #check if move is legal given history. If so return position after move, otherwise return None
     def is_legal(self,move_pos):
         global top_bar#so we can display rules messages on the top bar
@@ -264,7 +264,7 @@ def move_with_capture(position,move_pos,player_turn):
     new_position=remove_surrounded(new_position,player_turn)
     return new_position
 
-def stateUndo(state):
+def stateUndo(state):#FIX: top bar is sometimes the wrong colour after undoing? IDK why...
     #if game hasn't started, do nothing
     if not(len(state.board.history)==len(state.black_prisoners_history) and len(state.board.history)==len(state.white_prisoners_history)):
         print("Error: History lists unmatched!")
