@@ -155,6 +155,8 @@ class gameState:#state of a game in progress(before end of game and agreement ph
         self.board=board#Board object representing current position and history
         self.black_prisoners=black_prisoners#Current number of prisoners taken by black
         self.white_prisoners=white_prisoners#Current number of prisoners taken by white
+        self.black_prisoners_history=[black_prisoners]
+        self.white_prisoners_history=[white_prisoners]
         self.rule_config=rule_config
     def play_at_pos(self,board_pos):#play at a position if such a play is legal
         new_position=self.is_legal(board_pos)
@@ -174,6 +176,8 @@ class gameState:#state of a game in progress(before end of game and agreement ph
             self.board.position=new_position#change to new position
             self.turn=3-self.turn#switch turn
             self.board.history.append(copy_list(self.board.position))#add to history
+            self.black_prisoners_history.append(self.black_prisoners)
+            self.white_prisoners_history.append(self.white_prisoners)
             global top_bar
             if state.turn==1:
                 display_message(top_bar,"Black to play.")
@@ -262,19 +266,19 @@ def move_with_capture(position,move_pos,player_turn):
 
 def stateUndo(state):
     #if game hasn't started, do nothing
+    if not(len(state.board.history)==len(state.black_prisoners_history) and len(state.board.history)==len(state.white_prisoners_history)):
+        print("Error: History lists unmatched!")
+        return state
     if len(state.board.history)<=1:
         return state
     lastPosition=copy_list(state.board.history[-2])#CHECK: Does ko and superko still work properly on undo?
-    curPosition=copy_list(state.board.position)
-    for i in range(len(curPosition)):#undo prisoner counts
-        for j in range(len(curPosition)):
-            if lastPosition==1 and curPosition==0:#FIX: prisoner counts don't actually decrease on undo
-                state.white_prisoners-=1
-            elif lastPosition==2 and curPosition==0:
-                state.black_prisoners-=1
     state.turn=3-state.turn#swap turn
     state.board.position=lastPosition#turn to last position
+    state.black_prisoners=state.black_prisoners_history[-2]
+    state.white_prisoners=state.white_prisoners_history[-2]
     state.board.history.pop()#remove last turn on history
+    state.black_prisoners_history.pop()
+    state.white_prisoners_history.pop()
     return state
 
 #check if move is legal given history. If so return position after move, otherwise return None    
