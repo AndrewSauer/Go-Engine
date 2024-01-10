@@ -313,16 +313,16 @@ white_prisoner_bar=textBox(name="whitePrisonerBar",x=board_x+board_length+5,y=0,
 display_message(white_prisoner_bar,"White Prisoners: 0")
 
 def display_turn(top_bar,turn):
-    if state.turn==1:#display turn whenever hover is activated
-        display_message(top_bar,"Black to play.")
+    if state.turn==1:
         top_bar.background=(0,0,0)
         top_bar.border=(255,255,255)
         top_bar.textcolor=(255,255,255)
+        display_message(top_bar,"Black to play.")#must come after the other changes, since this is when the bar is actually drawn
     else:
-        display_message(top_bar,"White to play.")
         top_bar.background=(255,255,255)
         top_bar.border=(0,0,0)
-        top_bar.textcolor=(0,0,0)    
+        top_bar.textcolor=(0,0,0)
+        display_message(top_bar,"White to play.")
 
 #player_turn=1#black's turn first
 last_mouse_board_pos=None#initialize mouse position on board
