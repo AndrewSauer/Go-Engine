@@ -300,7 +300,7 @@ space_length=int((screen_height-top_bar_height)/board_size)
 board_length=board_size*space_length
 board_x=int((screen_width-board_length)/2)
 board_y=int((screen_height-top_bar_height-board_length)/2)+top_bar_height
-state=gameState(1,Board(board_x,board_y,space_length,board_size),0,0,ruleConfig())
+state=gameState(1,Board(board_x,board_y,space_length,board_size),0,0,ruleConfig(ending="nimgo"))
 #cur_board=Board(board_x,board_y,space_length,board_size)
 
 #Create top bar, display "black to play" on it
@@ -320,8 +320,10 @@ buttons.append(textBox(name="whiteResign",x=board_x+board_length+5,y=screen_heig
 display_message(buttons[0],"Black Resign")
 display_message(buttons[1],"White Resign")
 if state.rule_config.ending=="nimgo":#create buttons for black and white to return prisoners
-    pass
-
+    buttons.append(textBox(name="blackPrisonerReturn",x=5,y=screen_height-2*top_bar_height-10,width=board_x-10,height=top_bar_height,background=(0,0,0),border=(255,255,255),textcolor=(255,255,255),text="Return Prisoner"))
+    display_message(buttons[-1],"Return Prisoner")
+    buttons.append(textBox(name="whitePrisonerReturn",x=board_x+board_length+5,y=screen_height-2*top_bar_height-10,width=board_x-10,height=top_bar_height,text="Return Prisoner"))
+    display_message(buttons[-1],"Return Prisoner")
 def display_turn(top_bar,turn):
     if state.turn==1:
         top_bar.background=(0,0,0)
@@ -364,6 +366,23 @@ while True:
                             top_bar.textcolor=(255,255,255)
                             display_message(top_bar,"Black wins by resignation!")
                             game_over=True
+                        elif button.name=="blackPrisonerReturn" and state.turn==1 and state.black_prisoners>0:#return black prisoner instead of black turn
+                            state.black_prisoners-=1
+                            #add to history
+                            state.black_prisoners_history.append(state.black_prisoners)
+                            state.white_prisoners_history.append(state.white_prisoners)
+                            state.board.history.append(copy_list(state.board.position))
+                            display_message(black_prisoner_bar,"Black Prisoners: "+str(state.black_prisoners))#display new number of black prisoners
+                            state.turn=2#change turn
+                        elif button.name=="whitePrisonerReturn" and state.turn==2 and state.white_prisoners>0:#return white prisoner instead of black turn
+                            state.white_prisoners-=1
+                            #add to history
+                            state.black_prisoners_history.append(state.black_prisoners)
+                            state.white_prisoners_history.append(state.white_prisoners)
+                            state.board.history.append(copy_list(state.board.position))
+                            display_message(white_prisoner_bar,"White Prisoners: "+str(state.white_prisoners))#display new number of white prisoners
+                            state.turn=1#change turn
+
         elif event.type==pygame.KEYDOWN and event.key==pygame.K_LCTRL:
             ctrl_held=True
         elif event.type==pygame.KEYUP and event.key==pygame.K_LCTRL:
