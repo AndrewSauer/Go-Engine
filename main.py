@@ -312,6 +312,16 @@ display_message(black_prisoner_bar,"Black Prisoners: 0")
 white_prisoner_bar=textBox(name="whitePrisonerBar",x=board_x+board_length+5,y=0,width=board_x-10,height=top_bar_height,text="")
 display_message(white_prisoner_bar,"White Prisoners: 0")
 
+#create buttons list
+buttons=[]
+#add buttons for resigning
+buttons.append(textBox(name="blackResign",x=5,y=screen_height-top_bar_height-5,width=board_x-10,height=top_bar_height,background=(0,0,0),border=(255,255,255),textcolor=(255,255,255),text="Black Resign"))
+buttons.append(textBox(name="whiteResign",x=board_x+board_length+5,y=screen_height-top_bar_height-5,width=board_x-10,height=top_bar_height,text="White Resign"))
+display_message(buttons[0],"Black Resign")
+display_message(buttons[1],"White Resign")
+if state.rule_config.ending=="nimgo":#create buttons for black and white to return prisoners
+    pass
+
 def display_turn(top_bar,turn):
     if state.turn==1:
         top_bar.background=(0,0,0)
@@ -328,6 +338,7 @@ def display_turn(top_bar,turn):
 last_mouse_board_pos=None#initialize mouse position on board
 do_hover=False#Whether to hover a ghost stone over a position(used to avoid too many legality checks)
 ctrl_held=False#Whether ctrl key is held
+game_over=False#For now, freeze the game when it is over
 while True:
     x,y=pygame.mouse.get_pos()
     mouse_board_pos=state.board.mouse_over(x,y)
@@ -338,6 +349,21 @@ while True:
                 #after playing at position, display new prisoner counts
                 display_message(black_prisoner_bar,"Black Prisoners: "+str(state.black_prisoners))
                 display_message(white_prisoner_bar,"White Prisoners: "+str(state.white_prisoners))
+            else:#check for button presses
+                for button in buttons:
+                    if button.within(x,y):
+                        if button.name=="blackResign" and state.turn==1:#black resignation on black's turn
+                            top_bar.background=(255,255,255)
+                            top_bar.border=(0,0,0)
+                            top_bar.textcolor=(0,0,0)
+                            display_message(top_bar,"White wins by resignation!")
+                            game_over=True
+                        elif button.name=="whiteResign" and state.turn==2:#white resignation on white's turn
+                            top_bar.background=(0,0,0)
+                            top_bar.border=(255,255,255)
+                            top_bar.textcolor=(255,255,255)
+                            display_message(top_bar,"Black wins by resignation!")
+                            game_over=True
         elif event.type==pygame.KEYDOWN and event.key==pygame.K_LCTRL:
             ctrl_held=True
         elif event.type==pygame.KEYUP and event.key==pygame.K_LCTRL:
@@ -361,3 +387,5 @@ while True:
 
     last_mouse_board_pos=mouse_board_pos
     pygame.display.flip()
+    if game_over:
+        break#CONTINUE: find something better to do when the game is over
