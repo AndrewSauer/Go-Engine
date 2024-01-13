@@ -344,6 +344,8 @@ game_over=False#For now, freeze the game when it is over
 while True:
     x,y=pygame.mouse.get_pos()
     mouse_board_pos=state.board.mouse_over(x,y)
+    if not mouse_board_pos:#display turn if we're outside the board
+        display_turn(top_bar,state.turn)
     for event in pygame.event.get():#update when placing down stones
         if event.type==pygame.MOUSEBUTTONDOWN and event.button==1:#Left mouse button is 1, right is 3, middle is 2
             if mouse_board_pos:
@@ -351,7 +353,7 @@ while True:
                 #after playing at position, display new prisoner counts
                 display_message(black_prisoner_bar,"Black Prisoners: "+str(state.black_prisoners))
                 display_message(white_prisoner_bar,"White Prisoners: "+str(state.white_prisoners))
-            else:#check for button presses
+            else:#if outside the board, check for button presses
                 for button in buttons:
                     if button.within(x,y):
                         if button.name=="blackResign" and state.turn==1:#black resignation on black's turn
