@@ -150,14 +150,17 @@ def blank_position(board_size):
     return result
 
 class gameState:#state of a game in progress(before end of game and agreement phase)
-    def __init__(self,turn,board,black_prisoners,white_prisoners,rule_config):
-        self.turn=turn#1=black's turn, 2=white's turn
+    def __init__(self,board,rule_config):#Initialize game at start from initial board
+        self.turn=1#1=black's turn, 2=white's turn
         self.board=board#Board object representing current position and history
-        self.black_prisoners=black_prisoners#Current number of prisoners taken by black
-        self.white_prisoners=white_prisoners#Current number of prisoners taken by white
-        self.black_prisoners_history=[black_prisoners]
-        self.white_prisoners_history=[white_prisoners]
+        self.black_prisoners=0#Current number of prisoners taken by black
+        self.white_prisoners=0#Current number of prisoners taken by white
+        if type(rule_config.komi)==int:
+            self.white_prisoners+=rule_config.komi#add fixed komi
+        self.black_prisoners_history=[self.black_prisoners]
+        self.white_prisoners_history=[self.white_prisoners]
         self.rule_config=rule_config
+        #ADD: allow handicap setups, initial prisoner counts beyond just komi, etc
     def play_at_pos(self,board_pos):#play at a position if such a play is legal
         new_position=self.is_legal(board_pos)
         if new_position:
@@ -199,7 +202,7 @@ class gameState:#state of a game in progress(before end of game and agreement ph
     #CONTINUE: Allow passing, ending, pierule komi
 
 class ruleConfig:#A configuration of the rules we use for any particular game
-    def __init__(self,superko="Positional",suicide=True,sekieyes=True,scoring="Area",komi="Pierule",ending="Twopass",disputes="ContinueFourpass",handicap=0,startpos=blank_position(19),timecontrols=None):
+    def __init__(self,superko="Positional",suicide=True,sekieyes=True,scoring="Area",komi="Pierule",ending="TwoPass",disputes="FourPass",handicap=0,startpos=blank_position(19),timecontrols=None):
         self.superko=superko#
         self.suicide=suicide#
         self.sekieyes=sekieyes#
@@ -300,7 +303,7 @@ space_length=int((screen_height-top_bar_height)/board_size)
 board_length=board_size*space_length
 board_x=int((screen_width-board_length)/2)
 board_y=int((screen_height-top_bar_height-board_length)/2)+top_bar_height
-state=gameState(1,Board(board_x,board_y,space_length,board_size),0,0,ruleConfig(ending="nimgo"))
+state=gameState(Board(board_x,board_y,space_length,board_size),ruleConfig(ending="nimgoTies",komi=7))
 #cur_board=Board(board_x,board_y,space_length,board_size)
 
 #Create top bar, display "black to play" on it
@@ -308,9 +311,9 @@ top_bar=textBox(name="topBar",x=board_x,y=0,width=board_length,height=top_bar_he
 display_message(top_bar,"Black to play.")
 #Create prisoner count bars
 black_prisoner_bar=textBox(name="blackPrisonerBar",x=5,y=0,width=board_x-10,height=top_bar_height,background=(0,0,0),border=(255,255,255),textcolor=(255,255,255),text="")
-display_message(black_prisoner_bar,"Black Prisoners: 0")
+display_message(black_prisoner_bar,"Black Prisoners: "+str(state.black_prisoners))
 white_prisoner_bar=textBox(name="whitePrisonerBar",x=board_x+board_length+5,y=0,width=board_x-10,height=top_bar_height,text="")
-display_message(white_prisoner_bar,"White Prisoners: 0")
+display_message(white_prisoner_bar,"White Prisoners: "+str(state.white_prisoners))
 
 #create buttons list
 buttons=[]
@@ -319,11 +322,14 @@ buttons.append(textBox(name="blackResign",x=5,y=screen_height-top_bar_height-5,w
 buttons.append(textBox(name="whiteResign",x=board_x+board_length+5,y=screen_height-top_bar_height-5,width=board_x-10,height=top_bar_height,text="White Resign"))
 display_message(buttons[0],"Black Resign")
 display_message(buttons[1],"White Resign")
-if state.rule_config.ending=="nimgo":#create buttons for black and white to return prisoners
+if state.rule_config.ending=="nimgo" or state.rule_config.ending=="nimgoTies":#create buttons for black and white to return prisoners
     buttons.append(textBox(name="blackPrisonerReturn",x=5,y=screen_height-2*top_bar_height-10,width=board_x-10,height=top_bar_height,background=(0,0,0),border=(255,255,255),textcolor=(255,255,255),text="Return Prisoner"))
     display_message(buttons[-1],"Return Prisoner")
     buttons.append(textBox(name="whitePrisonerReturn",x=board_x+board_length+5,y=screen_height-2*top_bar_height-10,width=board_x-10,height=top_bar_height,text="Return Prisoner"))
     display_message(buttons[-1],"Return Prisoner")
+if state.rule_config.ending=="nimgoTies":#create button for black to declare tie when white has no prisoners left
+    buttons.append(textBox(name="blackDeclareTie",x=5,y=screen_height-3*top_bar_height-15,width=board_x-10,height=top_bar_height,background=(0,0,0),border=(255,255,255),textcolor=(255,255,255),text="Declare Tie"))
+    display_message(buttons[-1],"Declare Tie")
 def display_turn(top_bar,turn):
     if state.turn==1:
         top_bar.background=(0,0,0)
@@ -384,6 +390,12 @@ while True:
                             state.board.history.append(copy_list(state.board.position))
                             display_message(white_prisoner_bar,"White Prisoners: "+str(state.white_prisoners))#display new number of white prisoners
                             state.turn=1#change turn
+                        elif button.name=="blackDeclareTie" and state.turn==1 and state.white_prisoners==0:#Allows black to declare a tie if White is out of prisoners
+                            top_bar.background=(128,128,128)
+                            top_bar.border=(0,0,0)
+                            top_bar.textcolor=(0,0,0)
+                            display_message(top_bar,"Game is a tie!")
+                            game_over=True
 
         elif event.type==pygame.KEYDOWN and event.key==pygame.K_LCTRL:
             ctrl_held=True
