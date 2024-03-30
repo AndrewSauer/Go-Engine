@@ -157,6 +157,9 @@ class gameState:#state of a game in progress(before end of game and agreement ph
         self.white_prisoners=0#Current number of prisoners taken by white
         if type(rule_config.komi)==int:
             self.white_prisoners+=rule_config.komi#add fixed komi
+        if rule_config.ending=="ultimate":#Each side gets one extra prisoner with ultimate rules
+            self.black_prisoners+=1
+            self.white_prisoners+=1
         self.black_prisoners_history=[self.black_prisoners]
         self.white_prisoners_history=[self.white_prisoners]
         self.rule_config=rule_config
@@ -303,7 +306,7 @@ space_length=int((screen_height-top_bar_height)/board_size)
 board_length=board_size*space_length
 board_x=int((screen_width-board_length)/2)
 board_y=int((screen_height-top_bar_height-board_length)/2)+top_bar_height
-state=gameState(Board(board_x,board_y,space_length,board_size),ruleConfig(ending="nimgoTies",komi=7))
+state=gameState(Board(board_x,board_y,space_length,board_size),ruleConfig(ending="ultimate",komi=7))
 #cur_board=Board(board_x,board_y,space_length,board_size)
 
 #Create top bar, display "black to play" on it
@@ -317,19 +320,24 @@ display_message(white_prisoner_bar,"White Prisoners: "+str(state.white_prisoners
 
 #create buttons list
 buttons=[]
-#add buttons for resigning
+#add buttons for resigning and declaring ties
 buttons.append(textBox(name="blackResign",x=5,y=screen_height-top_bar_height-5,width=board_x-10,height=top_bar_height,background=(0,0,0),border=(255,255,255),textcolor=(255,255,255),text="Black Resign"))
 buttons.append(textBox(name="whiteResign",x=board_x+board_length+5,y=screen_height-top_bar_height-5,width=board_x-10,height=top_bar_height,text="White Resign"))
 display_message(buttons[0],"Black Resign")
 display_message(buttons[1],"White Resign")
-if state.rule_config.ending=="nimgo" or state.rule_config.ending=="nimgoTies":#create buttons for black and white to return prisoners
+if state.rule_config.ending=="nimgo" or state.rule_config.ending=="nimgoTies" or state.rule_config.ending=="ultimate":#create buttons for black and white to return prisoners
     buttons.append(textBox(name="blackPrisonerReturn",x=5,y=screen_height-2*top_bar_height-10,width=board_x-10,height=top_bar_height,background=(0,0,0),border=(255,255,255),textcolor=(255,255,255),text="Return Prisoner"))
     display_message(buttons[-1],"Return Prisoner")
     buttons.append(textBox(name="whitePrisonerReturn",x=board_x+board_length+5,y=screen_height-2*top_bar_height-10,width=board_x-10,height=top_bar_height,text="Return Prisoner"))
     display_message(buttons[-1],"Return Prisoner")
-if state.rule_config.ending=="nimgoTies":#create button for black to declare tie when white has no prisoners left
+if state.rule_config.ending=="nimgoTies" or state.rule_config.ending=="ultimate":#create button for black to declare tie when white has no prisoners left CONTINUE: only add button when it can be used
     buttons.append(textBox(name="blackDeclareTie",x=5,y=screen_height-3*top_bar_height-15,width=board_x-10,height=top_bar_height,background=(0,0,0),border=(255,255,255),textcolor=(255,255,255),text="Declare Tie"))
     display_message(buttons[-1],"Declare Tie")
+    tiemaster=1#tiemaster is the player who can declare a tie when the other player is out of prisoners
+if state.rule_config.ending=="ultimate":#button for white to declare tie #CONTINUE: only add button when it can be used
+    buttons.append(textBox(name="whiteDeclareTie",x=board_x+board_length+5,y=screen_height-3*top_bar_height-15,width=board_x-10,height=top_bar_height,background=(255,255,255),border=(0,0,0),textcolor=(0,0,0),text="Declare Tie"))
+    display_message(buttons[-1],"Declare Tie")
+    tiemaster=0#tiemaster is TBD, first person to return prisoner is tiemaster #CONTINUE: make sure tiemaster doesn't get messed up on undo
 def display_turn(top_bar,turn):
     if state.turn==1:
         top_bar.background=(0,0,0)
@@ -375,6 +383,8 @@ while True:
                             display_message(top_bar,"Black wins by resignation!")
                             game_over=True
                         elif button.name=="blackPrisonerReturn" and state.turn==1 and state.black_prisoners>0:#return black prisoner instead of black turn
+                            if tiemaster==0:#set tiemaster if first time
+                                tiemaster=1
                             state.black_prisoners-=1
                             #add to history
                             state.black_prisoners_history.append(state.black_prisoners)
@@ -383,6 +393,8 @@ while True:
                             display_message(black_prisoner_bar,"Black Prisoners: "+str(state.black_prisoners))#display new number of black prisoners
                             state.turn=2#change turn
                         elif button.name=="whitePrisonerReturn" and state.turn==2 and state.white_prisoners>0:#return white prisoner instead of black turn
+                            if tiemaster==0:
+                                tiemaster=2
                             state.white_prisoners-=1
                             #add to history
                             state.black_prisoners_history.append(state.black_prisoners)
@@ -390,7 +402,13 @@ while True:
                             state.board.history.append(copy_list(state.board.position))
                             display_message(white_prisoner_bar,"White Prisoners: "+str(state.white_prisoners))#display new number of white prisoners
                             state.turn=1#change turn
-                        elif button.name=="blackDeclareTie" and state.turn==1 and state.white_prisoners==0:#Allows black to declare a tie if White is out of prisoners
+                        elif button.name=="blackDeclareTie" and state.turn==1 and state.white_prisoners==0 and tiemaster==1:#Allows black to declare a tie if White is out of prisoners
+                            top_bar.background=(128,128,128)
+                            top_bar.border=(0,0,0)
+                            top_bar.textcolor=(0,0,0)
+                            display_message(top_bar,"Game is a tie!")
+                            game_over=True
+                        elif button.name=="whiteDeclareTie" and state.turn==2 and state.black_prisoners==0 and tiemaster==2:#Allows white to declare a tie if Black is out of prisoners
                             top_bar.background=(128,128,128)
                             top_bar.border=(0,0,0)
                             top_bar.textcolor=(0,0,0)
